@@ -149,7 +149,21 @@ low-yield.
 - [x] Obtain per-college data: downloaded WhatDoTheyKnow FOI 2025 (`data/foi_physics_college_2025.xlsx`) — direct-applicant acceptance rates for all 29 colleges, 2022–2024
 - [x] Run full analysis on FOI data: Wilson CI, Bayesian shrinkage (K=20, prior 11.9%), AVOID flags for all 29 colleges
 - [x] Identify Worcester College as AVOID: shrunk acceptance rate 6.7%, Wilson CI upper bound 10.4% < Oxford mean 11.9%; consistent across 2yr (2023 suppressed) — `output/college_physics_summary.md`
-- [ ] [med] Identify if University College or Trinity warrant caution (both ~8.5–8.7% raw, within Wilson CI of mean; watch but not statistically AVOID)
+- [x] Define PREFER criteria under equal-quality-pool assumption: shrunk rate > oxford_mean + 2pp (>13.9%), no Wilson CI filter (shrunk-only rule). 9 PREFER colleges identified. See Streamlit app and tier table below.
+- [x] Define AVOID criteria under shrunk-only rule: shrunk rate < oxford_mean − 2pp (<9.9%). 12 AVOID colleges under this framework (vs 1 under the statistically conservative criterion requiring Wilson CI upper < mean).
+- [x] Add PREFER tier to Streamlit app (green bars/rows) alongside AVOID (red) and neutral (blue)
+- [x] Publish Streamlit app and all code to https://github.com/dmitry-goryunov/oxford_physics
+
+**College tier table (shrunk-rate-only, equal-quality assumption, 2022–2024 FOI data):**
+
+| Tier | Colleges | Shrunk rate |
+|------|----------|-------------|
+| PREFER (>13.9%) | Merton, St Edmund Hall, LMH, St Catz, St Anne's, Somerville, New College, Christ Church, Jesus | 14–17% |
+| Neutral (9.9–13.9%) | Keble, Exeter, Balliol, Magdalen, Hertford, St John's, Wadham, Pemberton | ~10–14% |
+| AVOID (<9.9%) | Mansfield, Brasenose, Trinity, Oriel, Pembroke, University College, Lincoln, St Hilda's, St Peter's, Worcester, St Hugh's, Corpus Christi | 3–10% |
+
+*Caveat*: Equal-quality assumption is strong. PREFER/AVOID under the shrunk-only rule likely reflects applicant-pool effects more than college-specific treatment. The statistically conservative AVOID (Worcester only) is the defensible claim.
+
 - [ ] [med] Visit shortlisted colleges in person if feasible
 - [ ] [low] Adjust for "access college" effects without conditional data
 - [ ] [low] Draft additional FOI requests for shortlist-level per-college data (to cross-check acceptance-rate analysis)
@@ -174,6 +188,7 @@ Record significant decisions and the reasoning, so we can revisit them later.
 | 2026-05-18 | Worcester College flagged AVOID             | Acceptance rate 6.7% shrunk (lower bound); Wilson CI upper bound 10.4% < Oxford mean 11.9%; consistent 2yr; most likely applicant-pool quality effect but enough evidence to avoid. |
 | 2026-05-18 | Annual Report does not contain per-college Physics data | 2025 Annual Admissions Statistical Report (downloaded via Playwright) is structured by demographic variable (ACORN, POLAR, gender, ethnicity); no per-college per-subject cross-tab. |
 | 2026-05-18 | FOI 2025 is primary data source for college analysis | WhatDoTheyKnow FOI to Oxford, July 2025: direct-applicant acceptance rates for all 29 colleges, UCAS cycles 2019–2024. Metric incorporates reallocation; most useful for college choice. |
+| 2026-05-18 | Adopted equal-quality-pool assumption for PREFER analysis | User requested analysis treating all applicants as identical quality. Under this assumption the shrunk-rate differences reflect capacity effects, not pool quality. PREFER = shrunk > 13.9%; AVOID = shrunk < 9.9%. 9 PREFER, 12 AVOID, 8 neutral. |
 | 2026-05-11 | LinkedIn post published                     | Real artefact from Balliol taster programme; useful for interview talking-point, not for admissions per se |
 
 ---

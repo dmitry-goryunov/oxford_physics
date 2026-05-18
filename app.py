@@ -79,6 +79,8 @@ def load_and_process():
         & (agg["n"] >= 30)
         & (agg["n_suppressed"] <= 1)
     )
+    # PREFER: shrunk > mean+2pp (equal-quality assumption; no Wilson CI filter)
+    agg["PREFER"] = agg["shrunk_rate"] > (oxford_mean + 0.02)
     agg["data_quality"] = agg["n_suppressed"].map(
         {0: "complete", 1: "1 yr suppressed", 2: "2 yr suppressed", 3: "all suppressed"}
     )
@@ -105,7 +107,13 @@ c1.metric("Oxford-wide acceptance rate", f"{oxford_mean:.1%}",
           help="Direct-applicant acceptance rate, all colleges, 2022–2024")
 c2.metric("Direct applicants (3yr)", f"{int(oxford_n):,}")
 c3.metric("Acceptances (3yr)", f"{int(oxford_k):,}")
-c4.metric("Colleges flagged AVOID", str(int(agg["AVOID"].sum())))
+c4.metric("Colleges flagged AVOID", str(int(agg["AVOID"].sum())),
+          help="Conservative: shrunk rate > 2pp below mean AND Wilson CI upper bound < mean AND n≥30 AND ≤1 suppressed year")
+
+c5, c6 = st.columns(2)
+c5.metric("Colleges flagged PREFER", str(int(agg["PREFER"].sum())),
+          help="Shrunk rate > 2pp above Oxford mean (equal-quality-pool assumption)")
+c6.metric("Oxford mean (shrunk baseline)", f"{oxford_mean:.1%}")
 
 st.divider()
 
@@ -130,10 +138,18 @@ def _fmt_raw(row):
 st.subheader("Acceptance rate by college (direct applicants, 2022–2024)")
 st.caption(
     "Bars show Bayesian-shrunk acceptance rate (prior = Oxford mean, K=20). "
-    "Error bars = 95% Wilson CI. Red dashed line = Oxford mean."
+    "Error bars = 95% Wilson CI. Red dashed line = Oxford mean. "
+    "Green = PREFER (shrunk > mean+2pp). Red = AVOID (conservative, Wilson CI upper < mean). Blue = neutral."
 )
 
-colors = ["#d32f2f" if a else "#1976d2" for a in agg["AVOID"]]
+def _bar_color(row):
+    if row["AVOID"]:
+        return "#d32f2f"
+    if row["PREFER"]:
+        return "#388e3c"
+    return "#1976d2"
+
+colors = agg.apply(_bar_color, axis=1).tolist()
 
 fig = go.Figure()
 
@@ -157,6 +173,7 @@ fig.add_trace(go.Bar(
         agg["data_quality"],
         agg["AVOID"].astype(str),
         agg["rank"],
+        agg["PREFER"].astype(str),
     ], axis=-1),
     hovertemplate=(
         "<b>%{x}</b><br>"
@@ -166,6 +183,7 @@ fig.add_trace(go.Bar(
         "Applications: %{customdata[0]}<br>"
         "Acceptances: %{customdata[1]}<br>"
         "Data: %{customdata[3]}<br>"
+        "PREFER: %{customdata[6]}<br>"
         "AVOID: %{customdata[4]}<extra></extra>"
     ),
 ))
@@ -200,16 +218,18 @@ st.subheader("Full ranked table")
 
 display = agg[[
     "rank", "college", "n", "k", "raw_rate", "shrunk_rate",
-    "w_lo", "w_hi", "AVOID", "data_quality"
+    "w_lo", "w_hi", "PREFER", "AVOID", "data_quality"
 ]].copy()
 display.columns = [
     "Rank", "College", "Apps (3yr)", "Known acc", "Raw rate",
-    "Shrunk rate", "Wilson lo", "Wilson hi", "AVOID", "Data quality"
+    "Shrunk rate", "Wilson lo", "Wilson hi", "PREFER", "AVOID", "Data quality"
 ]
 
 def style_table(row):
     if row["AVOID"]:
         return ["background-color: #ffebee"] * len(row)
+    if row["PREFER"]:
+        return ["background-color: #e8f5e9"] * len(row)
     return [""] * len(row)
 
 display["Known acc"] = agg.apply(_fmt_acc, axis=1)
@@ -221,6 +241,8 @@ styled = (
     .apply(style_table, axis=1)
     .format({c: "{:.1%}" for c in pct_cols})
     .format({"Apps (3yr)": "{:.0f}"})
+    .format({"Raw rate": lambda x: x})
+    .format({"Known acc": lambda x: x})
 )
 
 st.dataframe(styled, use_container_width=True, hide_index=True)
@@ -248,7 +270,12 @@ yr_data = df3_raw[df3_raw["college"] == selected].sort_values("cycle")
 col_l, col_r = st.columns([1, 2])
 
 with col_l:
-    flag = "🔴 **AVOID**" if row["AVOID"] else "🟢 No AVOID flag"
+    if row["AVOID"]:
+        flag = "🔴 **AVOID** — shrunk rate statistically below Oxford mean"
+    elif row["PREFER"]:
+        flag = "🟢 **PREFER** — shrunk rate above Oxford mean (equal-quality assumption)"
+    else:
+        flag = "🔵 **Neutral** — within statistical noise of Oxford mean"
     st.markdown(f"### {selected}")
     st.markdown(flag)
     st.metric("Rank", f"#{int(row['rank'])} of 29")
@@ -350,8 +377,12 @@ captures the full pipeline.
   for colleges with suppressed (≤5) cells.
 - *Bayesian shrinkage*: Beta prior equivalent to 20 pseudo-observations at the Oxford mean
   (11.9%). Pulls small-sample colleges toward the overall mean.
-- *AVOID flag criteria*: shrunk rate > 2pp below Oxford mean AND Wilson CI upper bound < mean
-  AND ≥30 direct applicants AND ≤1 suppressed year.
+- *AVOID flag criteria (conservative)*: shrunk rate > 2pp below Oxford mean AND Wilson CI
+  upper bound < mean AND ≥30 direct applicants AND ≤1 suppressed year.
+- *PREFER flag criteria (equal-quality assumption)*: shrunk rate > 2pp above Oxford mean.
+  This assumes applicant pools are identical in quality across colleges. In practice, PREFER
+  colleges may attract stronger self-selected pools — the observed advantage is likely partly
+  applicant-pool effect, not a college-specific acceptance premium.
 
 **Limitations**:
 1. Direct applicants only. Open applicants (~20% of total) are excluded from both numerator and
