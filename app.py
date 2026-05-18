@@ -109,6 +109,22 @@ c4.metric("Colleges flagged AVOID", str(int(agg["AVOID"].sum())))
 
 st.divider()
 
+# ── Formatting helpers (used by both chart and table) ──────────────────────────
+
+def _fmt_acc(row):
+    if row["n_suppressed"] == 3:
+        return "— (all suppressed)"
+    if row["n_suppressed"] > 0:
+        return f"≥ {int(row['k'])}"
+    return str(int(row["k"]))
+
+def _fmt_raw(row):
+    if row["n_suppressed"] == 3:
+        return "—"
+    if row["n_suppressed"] > 0:
+        return f"≥ {row['k'] / row['n']:.1%}"
+    return f"{row['k'] / row['n']:.1%}"
+
 # ── Ranked bar chart ───────────────────────────────────────────────────────────
 
 st.subheader("Acceptance rate by college (direct applicants, 2022–2024)")
@@ -195,20 +211,6 @@ def style_table(row):
     if row["AVOID"]:
         return ["background-color: #ffebee"] * len(row)
     return [""] * len(row)
-
-def _fmt_acc(row):
-    if row["n_suppressed"] == 3:
-        return "— (all suppressed)"
-    if row["n_suppressed"] > 0:
-        return f"≥ {int(row['k'])}"
-    return str(int(row["k"]))
-
-def _fmt_raw(row):
-    if row["n_suppressed"] == 3:
-        return "—"
-    if row["n_suppressed"] > 0:
-        return f"≥ {row['raw_rate']:.1%}"
-    return f"{row['raw_rate']:.1%}"
 
 display["Known acc"] = agg.apply(_fmt_acc, axis=1)
 display["Raw rate"] = agg.apply(_fmt_raw, axis=1)
