@@ -135,16 +135,20 @@ fig.add_trace(go.Bar(
     ),
     marker_color=colors,
     customdata=np.stack([
-        agg["n"], agg["k"], agg["raw_rate"], agg["data_quality"],
-        agg["AVOID"].astype(str), agg["rank"]
+        agg["n"],
+        agg.apply(_fmt_acc, axis=1),
+        agg.apply(_fmt_raw, axis=1),
+        agg["data_quality"],
+        agg["AVOID"].astype(str),
+        agg["rank"],
     ], axis=-1),
     hovertemplate=(
         "<b>%{x}</b><br>"
         "Rank: #%{customdata[5]}<br>"
         "Shrunk rate: %{y:.1%}<br>"
-        "Raw rate: %{customdata[2]:.1%}<br>"
-        "Applications: %{customdata[0]:.0f}<br>"
-        "Known acceptances: %{customdata[1]:.0f}<br>"
+        "Raw rate: %{customdata[2]}<br>"
+        "Applications: %{customdata[0]}<br>"
+        "Acceptances: %{customdata[1]}<br>"
         "Data: %{customdata[3]}<br>"
         "AVOID: %{customdata[4]}<extra></extra>"
     ),
@@ -192,12 +196,29 @@ def style_table(row):
         return ["background-color: #ffebee"] * len(row)
     return [""] * len(row)
 
-pct_cols = ["Raw rate", "Shrunk rate", "Wilson lo", "Wilson hi"]
+def _fmt_acc(row):
+    if row["n_suppressed"] == 3:
+        return "— (all suppressed)"
+    if row["n_suppressed"] > 0:
+        return f"≥ {int(row['k'])}"
+    return str(int(row["k"]))
+
+def _fmt_raw(row):
+    if row["n_suppressed"] == 3:
+        return "—"
+    if row["n_suppressed"] > 0:
+        return f"≥ {row['raw_rate']:.1%}"
+    return f"{row['raw_rate']:.1%}"
+
+display["Known acc"] = agg.apply(_fmt_acc, axis=1)
+display["Raw rate"] = agg.apply(_fmt_raw, axis=1)
+
+pct_cols = ["Shrunk rate", "Wilson lo", "Wilson hi"]
 styled = (
     display.style
     .apply(style_table, axis=1)
     .format({c: "{:.1%}" for c in pct_cols})
-    .format({"Apps (3yr)": "{:.0f}", "Known acc": "{:.0f}"})
+    .format({"Apps (3yr)": "{:.0f}"})
 )
 
 st.dataframe(styled, use_container_width=True, hide_index=True)
@@ -230,8 +251,21 @@ with col_l:
     st.markdown(flag)
     st.metric("Rank", f"#{int(row['rank'])} of 29")
     st.metric("3yr direct applicants", f"{int(row['n'])}")
-    st.metric("Known acceptances (3yr)", f"{int(row['k'])}")
-    st.metric("Raw acceptance rate", f"{row['raw_rate']:.1%}")
+    fully_suppressed = row["n_suppressed"] == 3
+    partial_suppressed = 0 < row["n_suppressed"] < 3
+    if fully_suppressed:
+        st.metric("Known acceptances (3yr)", "— (all suppressed)",
+                  help="All 3 years suppressed by Oxford (count ≤5 each year). True total is 3–15.")
+        st.metric("Raw acceptance rate", "—",
+                  help="Cannot compute: no confirmed acceptance counts.")
+    elif partial_suppressed:
+        st.metric("Known acceptances (3yr)", f"≥ {int(row['k'])}",
+                  help=f"{int(row['n_suppressed'])} year(s) suppressed. Shown value is a lower bound.")
+        st.metric("Raw acceptance rate", f"≥ {row['raw_rate']:.1%}",
+                  help="Lower bound — suppressed years counted as 0.")
+    else:
+        st.metric("Known acceptances (3yr)", f"{int(row['k'])}")
+        st.metric("Raw acceptance rate", f"{row['raw_rate']:.1%}")
     st.metric("Shrunk acceptance rate", f"{row['shrunk_rate']:.1%}",
               delta=f"{row['shrunk_rate'] - oxford_mean:+.1%} vs Oxford mean",
               delta_color="normal" if not row["AVOID"] else "inverse")
