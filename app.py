@@ -72,15 +72,11 @@ def load_and_process():
     )
     agg["rank"] = agg["shrunk_rate"].rank(ascending=False, method="min").astype(int)
 
-    # AVOID: shrunk < mean-2pp AND wilson_hi < mean AND n≥30 AND ≤1 suppressed year
-    agg["AVOID"] = (
-        (agg["shrunk_rate"] < (oxford_mean - 0.02))
-        & (agg["w_hi"] < oxford_mean)
-        & (agg["n"] >= 30)
-        & (agg["n_suppressed"] <= 1)
-    )
-    # PREFER: shrunk > mean+2pp (equal-quality assumption; no Wilson CI filter)
+    # PREFER/AVOID: symmetric shrunk-only rule (equal-quality assumption)
+    # PREFER: shrunk > mean+2pp
     agg["PREFER"] = agg["shrunk_rate"] > (oxford_mean + 0.02)
+    # AVOID: shrunk < mean-2pp
+    agg["AVOID"] = agg["shrunk_rate"] < (oxford_mean - 0.02)
     agg["data_quality"] = agg["n_suppressed"].map(
         {0: "complete", 1: "1 yr suppressed", 2: "2 yr suppressed", 3: "all suppressed"}
     )
@@ -108,7 +104,7 @@ c1.metric("Oxford-wide acceptance rate", f"{oxford_mean:.1%}",
 c2.metric("Direct applicants (3yr)", f"{int(oxford_n):,}")
 c3.metric("Acceptances (3yr)", f"{int(oxford_k):,}")
 c4.metric("Colleges flagged AVOID", str(int(agg["AVOID"].sum())),
-          help="Conservative: shrunk rate > 2pp below mean AND Wilson CI upper bound < mean AND n≥30 AND ≤1 suppressed year")
+          help="Shrunk rate > 2pp below Oxford mean (equal-quality-pool assumption)")
 
 c5, c6 = st.columns(2)
 c5.metric("Colleges flagged PREFER", str(int(agg["PREFER"].sum())),
@@ -139,7 +135,7 @@ st.subheader("Acceptance rate by college (direct applicants, 2022–2024)")
 st.caption(
     "Bars show Bayesian-shrunk acceptance rate (prior = Oxford mean, K=20). "
     "Error bars = 95% Wilson CI. Red dashed line = Oxford mean. "
-    "Green = PREFER (shrunk > mean+2pp). Red = AVOID (conservative, Wilson CI upper < mean). Blue = neutral."
+    "Green = PREFER (shrunk > mean+2pp). Red = AVOID (shrunk < mean−2pp). Blue = neutral. Both use equal-quality assumption."
 )
 
 def _bar_color(row):
@@ -271,7 +267,7 @@ col_l, col_r = st.columns([1, 2])
 
 with col_l:
     if row["AVOID"]:
-        flag = "🔴 **AVOID** — shrunk rate statistically below Oxford mean"
+        flag = "🔴 **AVOID** — shrunk rate > 2pp below Oxford mean"
     elif row["PREFER"]:
         flag = "🟢 **PREFER** — shrunk rate above Oxford mean (equal-quality assumption)"
     else:
@@ -377,12 +373,12 @@ captures the full pipeline.
   for colleges with suppressed (≤5) cells.
 - *Bayesian shrinkage*: Beta prior equivalent to 20 pseudo-observations at the Oxford mean
   (11.9%). Pulls small-sample colleges toward the overall mean.
-- *AVOID flag criteria (conservative)*: shrunk rate > 2pp below Oxford mean AND Wilson CI
-  upper bound < mean AND ≥30 direct applicants AND ≤1 suppressed year.
+- *AVOID flag criteria (equal-quality assumption)*: shrunk rate > 2pp below Oxford mean.
+  Symmetric with PREFER. Assumes applicant pools are identical; in practice AVOID colleges
+  may attract weaker self-selected pools, so the penalty may be partly applicant-pool effect.
 - *PREFER flag criteria (equal-quality assumption)*: shrunk rate > 2pp above Oxford mean.
-  This assumes applicant pools are identical in quality across colleges. In practice, PREFER
-  colleges may attract stronger self-selected pools — the observed advantage is likely partly
-  applicant-pool effect, not a college-specific acceptance premium.
+  In practice, PREFER colleges may attract stronger self-selected pools — the observed advantage
+  is likely partly applicant-pool effect, not a college-specific acceptance premium.
 
 **Limitations**:
 1. Direct applicants only. Open applicants (~20% of total) are excluded from both numerator and
