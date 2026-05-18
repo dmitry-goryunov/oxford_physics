@@ -1,0 +1,28 @@
+# Claude Code config
+.claude/
+
+# Large downloaded files
+data/AnnualReport2024.pdf
+
+# Scratch files
+data/foi_2023_physics_college.txt
+data/foi_2025_physics_college.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit cache
+.streamlit/
