@@ -350,12 +350,27 @@ with col_r:
         use_container_width=True,
     )
 
+# ── Data sources ───────────────────────────────────────────────────────────────
+
+st.divider()
+st.subheader("Data sources")
+st.markdown("""
+| # | Source | Link | What it contains |
+|---|--------|------|-----------------|
+| 1 | **FOI disclosure — University of Oxford, July 2025** | [WhatDoTheyKnow request](https://www.whatdotheyknow.com/request/physics_admissions_data_by_colle) | Per-college Physics direct-applicant application and acceptance counts, UCAS cycles 2019–2024. Acceptances attributed to the originally-applied college (reallocation absorbed). All 29 colleges. |
+| 2 | **Analysis code & raw data file** | [github.com/dmitry-goryunov/oxford_physics](https://github.com/dmitry-goryunov/oxford_physics) | Full source code for this app and the downloaded FOI spreadsheet (`data/foi_physics_college_2025.xlsx`). |
+
+The FOI response was submitted to Oxford via WhatDoTheyKnow and disclosed July 2025.
+Only UCAS cycles **2022–2024** are used for the analysis (3-year aggregate).
+Oxford suppresses cell counts of 5 or fewer — those cells appear as asterisks in the raw data and are treated as lower bounds here.
+""")
+
 # ── Methodology ────────────────────────────────────────────────────────────────
 
 st.divider()
 with st.expander("Methodology and caveats"):
     st.markdown("""
-**Data source**: WhatDoTheyKnow FOI response to the University of Oxford, July 2025.
+**Data source**: [WhatDoTheyKnow FOI response](https://www.whatdotheyknow.com/request/physics_admissions_data_by_colle) to the University of Oxford, July 2025.
 Physics undergraduate admissions, UCAS cycles 2019–2024. Only cycles 2022–2024 used here.
 
 **Metric**: *Acceptance rate for direct applicants, attributed to the initially-applied college.*
