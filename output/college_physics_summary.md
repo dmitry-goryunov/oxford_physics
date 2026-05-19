@@ -12,7 +12,7 @@ File: `data/foi_physics_college_2025.xlsx` (51KB, 29 colleges × 6 cycles)
 **Metric**: Acceptance rate for *direct* Physics applicants, attributed to the initially-applied
 college. Acceptances include any college — the reallocation effect is therefore **already absorbed**.
 
-This is the correct metric for college choice: "given Philip applies directly to college X,
+This is the correct metric for college choice: "given Student applies directly to college X,
 what fraction of students in his position eventually get into Oxford Physics?"
 
 **Why this is better than shortlist rates**: Shortlist rates (e.g., from Keble feedback PDFs)
@@ -141,10 +141,10 @@ rate still falls short of the Oxford average.**
   direct applicants succeed at a below-average rate.
 - Residual: 6.7% vs 11.9% Oxford mean (-5.2pp), replicated across 2 confirmed years.
 
-**For Philip**: This AVOID flag likely reflects pool quality, not Worcester-specific disadvantage.
-A strong applicant (Philip) would not necessarily face this rate. However, choosing Worcester
+**For Student**: This AVOID flag likely reflects pool quality, not Worcester-specific disadvantage.
+A strong applicant (Student) would not necessarily face this rate. However, choosing Worcester
 means competing against a pool where many applicants are below the Oxford threshold, which does
-not help Philip's positioning. The safest interpretation: **avoid Worcester for Physics unless
+not help Student's positioning. The safest interpretation: **avoid Worcester for Physics unless
 other factors strongly favour it**.
 
 ---
@@ -183,7 +183,7 @@ in the direct-applicant dataset).
    on the low side).
 3. All other colleges (including Keble, Balliol, Hertford, New, Christ Church, Merton, Somerville)
    are statistically indistinguishable — choose by fit.
-4. Philip's ESAT score is the dominant variable for any college in the "treat as equivalent" set.
+4. Student's ESAT score is the dominant variable for any college in the "treat as equivalent" set.
 
 ---
 
@@ -197,7 +197,7 @@ The FOI data confirms this: acceptance rates across most colleges cluster within
 11.9% mean after shrinkage. The residual variation is consistent with applicant-pool quality
 differences, not college-specific bias.
 
-**For Philip**: the marginal hour is almost always better spent on ESAT and interview practice
+**For Student**: the marginal hour is almost always better spent on ESAT and interview practice
 than on optimising college choice. Choose by visit, atmosphere, or gut feeling — not by
 one-decimal-place acceptance rate differences.
 

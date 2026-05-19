@@ -3,7 +3,7 @@
 ## Purpose
 
 This document defines the working context, priorities, and research methodology
-for supporting Philip's application to read Physics (F303) or Physics &
+for supporting Student's application to read Physics (F303) or Physics &
 Philosophy (VF53) at the University of Oxford.
 
 It exists to keep effort focused on variables that actually move the outcome,

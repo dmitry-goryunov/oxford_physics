@@ -387,7 +387,7 @@ been 70–74% in recent cycles, placing it roughly **1.0–1.1 standard deviatio
 That corresponds to approximately the **top 13–15% of all applicants by raw PAT score** — before
 contextual uplifts, which expand the shortlisted pool to ~29% of all applicants.
 
-**ESAT note for 2027 entry (Philip's cycle)**
+**ESAT note for 2027 entry (Student's cycle)**
 
 The ESAT replaces the PAT from October 2026. Oxford will use ESAT scores in the same R-score
 framework. ESAT is scored 1.0–9.0 per section. Oxford has not published ESAT-specific
@@ -457,7 +457,7 @@ captures the full pipeline.
    denominator.
 2. Suppressed cells (Oxford suppresses counts ≤5) introduce uncertainty for thin-data colleges.
 3. Applicant-pool quality is not observable. A low acceptance rate at a college could reflect
-   weaker self-selection, not a college-specific penalty. Philip as a strong candidate would
+   weaker self-selection, not a college-specific penalty. A strong candidate would
    likely face a higher conditional rate than the pool average.
 4. Wolfson College is absent from the FOI data.
 
@@ -471,6 +471,6 @@ robustly below average. ESAT score is the dominant variable.
     """)
 
 st.caption(
-    "Analysis by Philip's application project · Data: FOI 2025 (Oxford) · "
+    "Analysis by Student's application project · Data: FOI 2025 (Oxford) · "
     "Code: [github.com/dmitry-goryunov/oxford_physics](https://github.com/dmitry-goryunov/oxford_physics)"
 )
