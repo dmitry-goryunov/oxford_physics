@@ -413,9 +413,13 @@ st.markdown("""
 | # | Source | Link | What it contains |
 |---|--------|------|-----------------|
 | 1 | **FOI disclosure — University of Oxford, July 2025** | [WhatDoTheyKnow request](https://www.whatdotheyknow.com/request/physics_admissions_data_by_colle) | Per-college Physics direct-applicant application and acceptance counts, UCAS cycles 2019–2024. Acceptances attributed to the originally-applied college (reallocation absorbed). All 29 colleges. |
-| 2 | **Oxford Physics Admissions Report 2025** | [PDF](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2025.pdf) | Oxford-wide PAT statistics, shortlisting thresholds, R-score formula, and interview scoring guidance for 2026 entry. |
+| 2 | **Oxford Physics Admissions Report 2025** | [PDF](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2025.pdf) | Oxford-wide PAT statistics, shortlisting thresholds, R-score formula, and interview scoring guidance for 2026 entry. PAT mean 54.9%, threshold R-score ≥ 73.5. |
 | 3 | **Oxford Physics Admissions Report 2024** | [PDF](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2024.pdf) | Same as above for 2025 entry. PAT mean 49.6%, threshold R-score ≥ 70. |
-| 4 | **Analysis code & raw data file** | [github.com/dmitry-goryunov/oxford_physics](https://github.com/dmitry-goryunov/oxford_physics) | Full source code for this app and the downloaded FOI spreadsheet (`data/foi_physics_college_2025.xlsx`). |
+| 4 | **Oxford Physics Admissions Report 2023** | [PDF](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2023.pdf) | PAT mean 55.6%, SD 18.6%, 400 auto-shortlisted. Source for 2023 cycle figures in the shortlisting table. |
+| 5 | **Oxford Physics Admissions Report 2022** | [PDF](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2022.pdf) | PAT mean 51.2%, SD 16%, 307 auto-shortlisted. Source for 2022 cycle figures in the shortlisting table. |
+| 6 | **Oxford Physics ESAT page** | [physics.ox.ac.uk](https://www.physics.ox.ac.uk/study/undergraduates/how-apply/engineering-and-science-admissions-test-esat) | Confirms ESAT replaces PAT for Oxford Physics from October 2026. Test date: 12–16 October 2026. |
+| 7 | **Oxford Physics admissions procedures** | [physics.ox.ac.uk](https://www.physics.ox.ac.uk/study/undergraduates/how-apply/admissions-procedures-physics-courses) | Describes R-score formula, contextual data framework, and reallocation process in full. |
+| 8 | **Analysis code & raw data file** | [github.com/dmitry-goryunov/oxford_physics](https://github.com/dmitry-goryunov/oxford_physics) | Full source code for this app and the downloaded FOI spreadsheet (`data/foi_physics_college_2025.xlsx`). |
 
 The FOI response was submitted to Oxford via WhatDoTheyKnow and disclosed July 2025.
 All UCAS cycles **2019–2024** are used for the analysis (6-year aggregate).
