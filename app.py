@@ -350,6 +350,61 @@ with col_r:
         use_container_width=True,
     )
 
+# ── ESAT / test score context ─────────────────────────────────────────────────
+
+st.divider()
+st.subheader("Test score context (PAT historical → ESAT 2026)")
+st.caption(
+    "Oxford Physics switches from PAT to ESAT in October 2026. "
+    "No ESAT-specific shortlisting data exists yet — the figures below are PAT-based and serve as the best available proxy."
+)
+
+with st.expander("Shortlisting statistics and R-score formula", expanded=True):
+    st.markdown("""
+**Shortlisting formula (pre-interview R-score)**
+
+> R-score = PAT mark (%) + 10 × cGCSE
+>
+> Negative cGCSE scores are omitted (floor at zero).
+
+The cGCSE is expressed in standard deviations from the contextually-expected A\*/8/9 count
+at the applicant's school. A neutral/overseas applicant scores 0 (no boost, no penalty).
+
+**Historical shortlisting thresholds** *(Oxford Physics Admissions Reports)*
+
+| Cycle | PAT mean | PAT SD | R-score threshold | Auto-shortlisted | Total shortlisted | Total applicants |
+|-------|----------|--------|-------------------|-----------------|-------------------|-----------------|
+| 2025 (PAT) | 54.9% | 17.8pp | ≥ 73.5 | 379 | 468 | 1,637 |
+| 2024 (PAT) | 49.6% | 18.5pp | ≥ 70.0 | 378 | 525 | 1,790 |
+| 2023 (PAT) | 55.6% | 18.6pp | — | 400 | — | 1,672 |
+
+*Total shortlisted includes applicants below the automatic threshold who were shortlisted on contextual grounds (~15–20% of shortlisted pool).*
+
+**What does this mean for a neutral-cGCSE applicant?**
+
+With cGCSE = 0, the R-score equals the raw PAT mark. The automatic shortlisting threshold has
+been 70–74% in recent cycles, placing it roughly **1.0–1.1 standard deviations above the mean**.
+That corresponds to approximately the **top 13–15% of all applicants by raw PAT score** — before
+contextual uplifts, which expand the shortlisted pool to ~29% of all applicants.
+
+**ESAT note for 2027 entry (Philip's cycle)**
+
+The ESAT replaces the PAT from October 2026. Oxford will use ESAT scores in the same R-score
+framework. ESAT is scored 1.0–9.0 per section. Oxford has not published ESAT-specific
+shortlisting thresholds yet — the first ESAT-based admissions report will appear in December 2027.
+The PAT percentile targets above are the best available calibration.
+
+**Post-interview R-score** (for offer decisions)
+
+> R-score = PAT (%) + 10 × cGCSE + 2 × interview total (out of 100)
+
+Average interview score for accepted applicants: **8.00/10 per interview** (2024), **7.95/10** (2025).
+An average of ≥ 8.0 across three interviews strongly predicts an offer.
+
+*Source: [Oxford Physics Admissions Report 2024](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2024.pdf)
+and [2025](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2025.pdf)*
+""")
+
 # ── Data sources ───────────────────────────────────────────────────────────────
 
 st.divider()
@@ -358,7 +413,9 @@ st.markdown("""
 | # | Source | Link | What it contains |
 |---|--------|------|-----------------|
 | 1 | **FOI disclosure — University of Oxford, July 2025** | [WhatDoTheyKnow request](https://www.whatdotheyknow.com/request/physics_admissions_data_by_colle) | Per-college Physics direct-applicant application and acceptance counts, UCAS cycles 2019–2024. Acceptances attributed to the originally-applied college (reallocation absorbed). All 29 colleges. |
-| 2 | **Analysis code & raw data file** | [github.com/dmitry-goryunov/oxford_physics](https://github.com/dmitry-goryunov/oxford_physics) | Full source code for this app and the downloaded FOI spreadsheet (`data/foi_physics_college_2025.xlsx`). |
+| 2 | **Oxford Physics Admissions Report 2025** | [PDF](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2025.pdf) | Oxford-wide PAT statistics, shortlisting thresholds, R-score formula, and interview scoring guidance for 2026 entry. |
+| 3 | **Oxford Physics Admissions Report 2024** | [PDF](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2024.pdf) | Same as above for 2025 entry. PAT mean 49.6%, threshold R-score ≥ 70. |
+| 4 | **Analysis code & raw data file** | [github.com/dmitry-goryunov/oxford_physics](https://github.com/dmitry-goryunov/oxford_physics) | Full source code for this app and the downloaded FOI spreadsheet (`data/foi_physics_college_2025.xlsx`). |
 
 The FOI response was submitted to Oxford via WhatDoTheyKnow and disclosed July 2025.
 All UCAS cycles **2019–2024** are used for the analysis (6-year aggregate).
