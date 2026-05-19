@@ -363,46 +363,164 @@ with st.expander("Shortlisting statistics and R-score formula", expanded=True):
     st.markdown("""
 **Shortlisting formula (pre-interview R-score)**
 
-> R-score = PAT mark (%) + 10 × cGCSE
->
-> Negative cGCSE scores are omitted (floor at zero).
+> R-score = PAT mark (%) + 10 × cGCSE  *(negative cGCSE omitted)*
 
-The cGCSE is expressed in standard deviations from the contextually-expected A\*/8/9 count
+The cGCSE is expressed in standard deviations from the contextually-expected A*/8/9 count
 at the applicant's school. A neutral/overseas applicant scores 0 (no boost, no penalty).
+""")
 
-**Historical shortlisting thresholds** *(Oxford Physics Admissions Reports)*
+    # ── PAT historical data ────────────────────────────────────────────────────
+    pat_df = pd.DataFrame([
+        {"Cycle": 2022, "mean": 51.2, "sd": 16.0, "threshold": None,
+         "auto_shortlisted": 307, "below_threshold": 164, "applicants": 1633, "offers": None},
+        {"Cycle": 2023, "mean": 55.6, "sd": 18.6, "threshold": None,
+         "auto_shortlisted": 400, "below_threshold": 190, "applicants": 1672, "offers": None},
+        {"Cycle": 2024, "mean": 49.6, "sd": 18.5, "threshold": 70.0,
+         "auto_shortlisted": 378, "below_threshold": 147, "applicants": 1790, "offers": 202},
+        {"Cycle": 2025, "mean": 54.9, "sd": 17.8, "threshold": 73.5,
+         "auto_shortlisted": 379, "below_threshold":  89, "applicants": 1637, "offers": 201},
+    ])
+    pat_df["total_shortlisted"] = pat_df["auto_shortlisted"] + pat_df["below_threshold"]
 
-| Cycle | PAT mean | PAT SD | R-score threshold | Auto-shortlisted | Total shortlisted | Total applicants |
-|-------|----------|--------|-------------------|-----------------|-------------------|-----------------|
-| 2025 (PAT) | 54.9% | 17.8pp | ≥ 73.5 | 379 | 468 | 1,637 |
-| 2024 (PAT) | 49.6% | 18.5pp | ≥ 70.0 | 378 | 525 | 1,790 |
-| 2023 (PAT) | 55.6% | 18.6pp | — | 400 | — | 1,672 |
+    ch1, ch2 = st.columns(2)
 
-*Total shortlisted includes applicants below the automatic threshold who were shortlisted on contextual grounds (~15–20% of shortlisted pool).*
+    # Chart 1: approximate score distributions
+    with ch1:
+        st.caption("**Approximate PAT score distributions by cycle** (normal fit to reported mean & SD)")
+        year_colors = {2022: "#1976d2", 2023: "#388e3c", 2024: "#f57c00", 2025: "#7b1fa2"}
+        fig_dist = go.Figure()
+        x_vals = np.linspace(0, 100, 500)
+        from scipy.stats import norm as norm_dist
+        for _, r in pat_df.iterrows():
+            yr = int(r["Cycle"])
+            y_vals = norm_dist.pdf(x_vals, r["mean"], r["sd"]) * r["applicants"]
+            fig_dist.add_trace(go.Scatter(
+                x=x_vals, y=y_vals,
+                name=str(yr),
+                line=dict(color=year_colors[yr], width=2),
+                fill="tozeroy",
+                fillcolor=f"rgba{tuple(list(int(year_colors[yr].lstrip('#')[i:i+2], 16) for i in (0,2,4)) + [0.08])}",
+                hovertemplate=f"{yr} — PAT %{{x:.0f}}%<extra></extra>",
+            ))
+            if pd.notna(r["threshold"]):
+                fig_dist.add_vline(
+                    x=r["threshold"], line_dash="dash",
+                    line_color=year_colors[yr], line_width=1.5,
+                    annotation_text=f"{yr} threshold {r['threshold']:.0f}%",
+                    annotation_font_size=10,
+                    annotation_font_color=year_colors[yr],
+                    annotation_position="top left",
+                )
+        fig_dist.update_layout(
+            xaxis=dict(title="PAT score (%)", range=[0, 100]),
+            yaxis=dict(title="Approx. candidate count"),
+            plot_bgcolor="white", height=300,
+            margin=dict(t=10, b=10), legend=dict(title="Cycle"),
+        )
+        fig_dist.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.08)")
+        fig_dist.update_xaxes(showgrid=False)
+        st.plotly_chart(fig_dist, use_container_width=True)
 
-**What does this mean for a neutral-cGCSE applicant?**
+    # Chart 2: shortlisting funnel per year
+    with ch2:
+        st.caption("**Shortlisting funnel by cycle** (auto-shortlisted / total shortlisted / applicants)")
+        fig_funnel = go.Figure()
+        fig_funnel.add_trace(go.Bar(
+            name="All applicants",
+            x=pat_df["Cycle"].astype(str),
+            y=pat_df["applicants"],
+            marker_color="rgba(0,0,0,0.12)",
+        ))
+        fig_funnel.add_trace(go.Bar(
+            name="Total shortlisted",
+            x=pat_df["Cycle"].astype(str),
+            y=pat_df["total_shortlisted"],
+            marker_color="rgba(25,118,210,0.6)",
+        ))
+        fig_funnel.add_trace(go.Bar(
+            name="Auto-shortlisted (R-score only)",
+            x=pat_df["Cycle"].astype(str),
+            y=pat_df["auto_shortlisted"],
+            marker_color="rgba(25,118,210,1.0)",
+        ))
+        fig_funnel.update_layout(
+            barmode="overlay",
+            xaxis=dict(title="UCAS cycle"),
+            yaxis=dict(title="Candidates"),
+            plot_bgcolor="white", height=300,
+            margin=dict(t=10, b=10),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        )
+        fig_funnel.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.08)")
+        fig_funnel.update_xaxes(showgrid=False)
+        st.plotly_chart(fig_funnel, use_container_width=True)
 
-With cGCSE = 0, the R-score equals the raw PAT mark. The automatic shortlisting threshold has
-been 70–74% in recent cycles, placing it roughly **1.0–1.1 standard deviations above the mean**.
-That corresponds to approximately the **top 13–15% of all applicants by raw PAT score** — before
-contextual uplifts, which expand the shortlisted pool to ~29% of all applicants.
+    # Chart 3: mean ± SD trend
+    st.caption("**PAT mean ± 1 SD by cycle**")
+    fig_trend = go.Figure()
+    fig_trend.add_trace(go.Scatter(
+        x=pat_df["Cycle"].astype(str),
+        y=pat_df["mean"],
+        error_y=dict(type="data", array=pat_df["sd"], color="rgba(0,0,0,0.3)",
+                     thickness=1.5, width=6),
+        mode="markers+lines",
+        marker=dict(size=10, color="#1976d2"),
+        line=dict(color="#1976d2"),
+        name="PAT mean",
+        hovertemplate="Cycle %{x}<br>Mean %{y:.1f}%<extra></extra>",
+    ))
+    # Add known thresholds as scatter
+    thr_df = pat_df[pat_df["threshold"].notna()]
+    fig_trend.add_trace(go.Scatter(
+        x=thr_df["Cycle"].astype(str),
+        y=thr_df["threshold"],
+        mode="markers",
+        marker=dict(size=10, color="#d32f2f", symbol="diamond"),
+        name="Auto-shortlist threshold",
+        hovertemplate="Cycle %{x}<br>Threshold %{y:.1f}%<extra></extra>",
+    ))
+    fig_trend.add_hline(
+        y=70, line_dash="dot", line_color="rgba(211,47,47,0.4)", line_width=1,
+        annotation_text="~70% historical floor", annotation_font_size=10,
+        annotation_font_color="rgba(211,47,47,0.7)",
+    )
+    fig_trend.update_layout(
+        xaxis=dict(title="UCAS cycle"),
+        yaxis=dict(title="PAT score (%)", range=[35, 85]),
+        plot_bgcolor="white", height=260,
+        margin=dict(t=10, b=10),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    fig_trend.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.08)")
+    fig_trend.update_xaxes(showgrid=False)
+    st.plotly_chart(fig_trend, use_container_width=True)
+
+    st.markdown("""
+**What the charts show**
+
+- The score distribution shifts year to year (mean varies 50–56%) — a good score in one year
+  may be average in another. The threshold tracks the distribution, not an absolute cut-off.
+- Auto-shortlisting (pure R-score) typically captures ~21–24% of applicants; a further
+  ~5–12% are shortlisted on contextual grounds, bringing the total to ~27–33%.
 
 **ESAT note for 2027 entry (Student's cycle)**
 
-The ESAT replaces the PAT from October 2026. Oxford will use ESAT scores in the same R-score
-framework. ESAT is scored 1.0–9.0 per section. Oxford has not published ESAT-specific
-shortlisting thresholds yet — the first ESAT-based admissions report will appear in December 2027.
-The PAT percentile targets above are the best available calibration.
+ESAT replaces PAT from October 2026. Oxford will apply the same R-score framework.
+ESAT is scored 1.0–9.0 per section (Maths 1 + Physics for F303).
+The first ESAT-based admissions report will appear in December 2027 — PAT percentile
+targets above are the best available calibration until then.
 
-**Post-interview R-score** (for offer decisions)
+**Post-interview R-score** *(for offer decisions)*
 
 > R-score = PAT (%) + 10 × cGCSE + 2 × interview total (out of 100)
 
-Average interview score for accepted applicants: **8.00/10 per interview** (2024), **7.95/10** (2025).
-An average of ≥ 8.0 across three interviews strongly predicts an offer.
+Average interview mark for accepted applicants: **8.00/10** (2024), **7.95/10** (2025).
 
-*Source: [Oxford Physics Admissions Report 2024](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2024.pdf)
-and [2025](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2025.pdf)*
+*Source: Oxford Physics Admissions Reports
+[2022](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2022.pdf) ·
+[2023](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2023.pdf) ·
+[2024](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2024.pdf) ·
+[2025](https://www.physics.ox.ac.uk/system/files/file_attachments/AdmissionsReportDec2025.pdf)*
 """)
 
 # ── Data sources ───────────────────────────────────────────────────────────────
