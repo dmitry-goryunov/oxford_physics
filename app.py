@@ -18,7 +18,7 @@ def load_and_process():
     df = pd.read_excel("data/foi_physics_college_2025.xlsx", sheet_name="Data", header=0)
     df.columns = ["cycle", "course", "college", "applications", "acceptances"]
 
-    df3 = df[df["cycle"].isin([2022, 2023, 2024])].copy()
+    df3 = df[df["cycle"].isin([2019, 2020, 2021, 2022, 2023, 2024])].copy()
     df3["acceptances"] = df3["acceptances"].replace("*", np.nan)
     df3["applications"] = pd.to_numeric(df3["applications"], errors="coerce")
     df3["acceptances"] = pd.to_numeric(df3["acceptances"], errors="coerce")
@@ -30,7 +30,7 @@ def load_and_process():
     per_year.columns = [f"{m}_{y}" for m, y in per_year.columns]
     per_year = per_year.reset_index()
 
-    # 3-year aggregates
+    # 6-year aggregates
     agg = df3.groupby("college").agg(
         n=("applications", "sum"),
         k=("acceptances", "sum"),
@@ -77,8 +77,8 @@ def load_and_process():
     agg["PREFER"] = agg["shrunk_rate"] > (oxford_mean + 0.02)
     # AVOID: shrunk < mean-2pp
     agg["AVOID"] = agg["shrunk_rate"] < (oxford_mean - 0.02)
-    agg["data_quality"] = agg["n_suppressed"].map(
-        {0: "complete", 1: "1 yr suppressed", 2: "2 yr suppressed", 3: "all suppressed"}
+    agg["data_quality"] = agg["n_suppressed"].apply(
+        lambda x: "complete" if x == 0 else ("all suppressed" if x == 6 else f"{int(x)} yr suppressed")
     )
 
     agg = agg.merge(per_year, on="college", how="left")
@@ -93,16 +93,16 @@ agg, oxford_mean, oxford_n, oxford_k, df3_raw = load_and_process()
 st.title("Oxford Physics — College Selector")
 st.caption(
     "Statistical analysis of per-college Physics acceptance rates using FOI data "
-    "(WhatDoTheyKnow, July 2025). Covers UCAS cycles 2022–2024, direct applicants only."
+    "(WhatDoTheyKnow, July 2025). Covers UCAS cycles 2019–2024, direct applicants only."
 )
 
 # ── Key metrics ────────────────────────────────────────────────────────────────
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Oxford-wide acceptance rate", f"{oxford_mean:.1%}",
-          help="Direct-applicant acceptance rate, all colleges, 2022–2024")
-c2.metric("Direct applicants (3yr)", f"{int(oxford_n):,}")
-c3.metric("Acceptances (3yr)", f"{int(oxford_k):,}")
+          help="Direct-applicant acceptance rate, all colleges, 2019–2024")
+c2.metric("Direct applicants (6yr)", f"{int(oxford_n):,}")
+c3.metric("Acceptances (6yr)", f"{int(oxford_k):,}")
 c4.metric("Colleges flagged AVOID", str(int(agg["AVOID"].sum())),
           help="Shrunk rate > 2pp below Oxford mean (equal-quality-pool assumption)")
 
@@ -116,14 +116,14 @@ st.divider()
 # ── Formatting helpers (used by both chart and table) ──────────────────────────
 
 def _fmt_acc(row):
-    if row["n_suppressed"] == 3:
+    if row["n_suppressed"] == 6:
         return "— (all suppressed)"
     if row["n_suppressed"] > 0:
         return f"≥ {int(row['k'])}"
     return str(int(row["k"]))
 
 def _fmt_raw(row):
-    if row["n_suppressed"] == 3:
+    if row["n_suppressed"] == 6:
         return "—"
     if row["n_suppressed"] > 0:
         return f"≥ {row['k'] / row['n']:.1%}"
@@ -131,7 +131,7 @@ def _fmt_raw(row):
 
 # ── Ranked bar chart ───────────────────────────────────────────────────────────
 
-st.subheader("Acceptance rate by college (direct applicants, 2022–2024)")
+st.subheader("Acceptance rate by college (direct applicants, 2019–2024)")
 st.caption(
     "Bars show Bayesian-shrunk acceptance rate (prior = Oxford mean, K=20). "
     "Error bars = 95% Wilson CI. Red dashed line = Oxford mean. "
@@ -217,7 +217,7 @@ display = agg[[
     "w_lo", "w_hi", "PREFER", "AVOID", "data_quality"
 ]].copy()
 display.columns = [
-    "Rank", "College", "Apps (3yr)", "Known acc", "Raw rate",
+    "Rank", "College", "Apps (6yr)", "Known acc", "Raw rate",
     "Shrunk rate", "Wilson lo", "Wilson hi", "PREFER", "AVOID", "Data quality"
 ]
 
@@ -236,7 +236,7 @@ styled = (
     display.style
     .apply(style_table, axis=1)
     .format({c: "{:.1%}" for c in pct_cols})
-    .format({"Apps (3yr)": "{:.0f}"})
+    .format({"Apps (6yr)": lambda x: f"{x:.0f}"})
     .format({"Raw rate": lambda x: x})
     .format({"Known acc": lambda x: x})
 )
@@ -275,21 +275,21 @@ with col_l:
     st.markdown(f"### {selected}")
     st.markdown(flag)
     st.metric("Rank", f"#{int(row['rank'])} of 29")
-    st.metric("3yr direct applicants", f"{int(row['n'])}")
-    fully_suppressed = row["n_suppressed"] == 3
-    partial_suppressed = 0 < row["n_suppressed"] < 3
+    st.metric("6yr direct applicants", f"{int(row['n'])}")
+    fully_suppressed = row["n_suppressed"] == 6
+    partial_suppressed = 0 < row["n_suppressed"] < 6
     if fully_suppressed:
-        st.metric("Known acceptances (3yr)", "— (all suppressed)",
-                  help="All 3 years suppressed by Oxford (count ≤5 each year). True total is 3–15.")
+        st.metric("Known acceptances (6yr)", "— (all suppressed)",
+                  help="All 6 years suppressed by Oxford (count ≤5 each year).")
         st.metric("Raw acceptance rate", "—",
                   help="Cannot compute: no confirmed acceptance counts.")
     elif partial_suppressed:
-        st.metric("Known acceptances (3yr)", f"≥ {int(row['k'])}",
+        st.metric("Known acceptances (6yr)", f"≥ {int(row['k'])}",
                   help=f"{int(row['n_suppressed'])} year(s) suppressed. Shown value is a lower bound.")
         st.metric("Raw acceptance rate", f"≥ {row['raw_rate']:.1%}",
                   help="Lower bound — suppressed years counted as 0.")
     else:
-        st.metric("Known acceptances (3yr)", f"{int(row['k'])}")
+        st.metric("Known acceptances (6yr)", f"{int(row['k'])}")
         st.metric("Raw acceptance rate", f"{row['raw_rate']:.1%}")
     st.metric("Shrunk acceptance rate", f"{row['shrunk_rate']:.1%}",
               delta=f"{row['shrunk_rate'] - oxford_mean:+.1%} vs Oxford mean",
@@ -332,7 +332,7 @@ with col_r:
     )
 
     fig2.update_layout(
-        xaxis=dict(tickvals=[2022, 2023, 2024], title="UCAS cycle"),
+        xaxis=dict(tickvals=[2019, 2020, 2021, 2022, 2023, 2024], title="UCAS cycle"),
         yaxis=dict(tickformat=".0%", title="Acceptance rate"),
         plot_bgcolor="white",
         height=300,
@@ -361,7 +361,7 @@ st.markdown("""
 | 2 | **Analysis code & raw data file** | [github.com/dmitry-goryunov/oxford_physics](https://github.com/dmitry-goryunov/oxford_physics) | Full source code for this app and the downloaded FOI spreadsheet (`data/foi_physics_college_2025.xlsx`). |
 
 The FOI response was submitted to Oxford via WhatDoTheyKnow and disclosed July 2025.
-Only UCAS cycles **2022–2024** are used for the analysis (3-year aggregate).
+All UCAS cycles **2019–2024** are used for the analysis (6-year aggregate).
 Oxford suppresses cell counts of 5 or fewer — those cells appear as asterisks in the raw data and are treated as lower bounds here.
 """)
 
@@ -371,7 +371,7 @@ st.divider()
 with st.expander("Methodology and caveats"):
     st.markdown("""
 **Data source**: [WhatDoTheyKnow FOI response](https://www.whatdotheyknow.com/request/physics_admissions_data_by_colle) to the University of Oxford, July 2025.
-Physics undergraduate admissions, UCAS cycles 2019–2024. Only cycles 2022–2024 used here.
+Physics undergraduate admissions, UCAS cycles 2019–2024. All 6 cycles used here.
 
 **Metric**: *Acceptance rate for direct applicants, attributed to the initially-applied college.*
 If a student applies to college X, gets reallocated to college Y at shortlisting, and is eventually
