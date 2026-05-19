@@ -2,14 +2,16 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 from scipy.stats import beta as beta_dist
+from scipy.stats import norm as norm_dist
 
 st.set_page_config(
     page_title="Oxford Physics College Selector",
     page_icon="⚛️",
     layout="wide",
 )
+
+N_CYCLES = 6  # 2019–2024; update here if range changes
 
 # ── Data loading & processing ──────────────────────────────────────────────────
 
@@ -73,12 +75,12 @@ def load_and_process():
     agg["rank"] = agg["shrunk_rate"].rank(ascending=False, method="min").astype(int)
 
     # PREFER/AVOID: symmetric shrunk-only rule (equal-quality assumption)
-    # PREFER: shrunk > mean+2pp
     agg["PREFER"] = agg["shrunk_rate"] > (oxford_mean + 0.02)
-    # AVOID: shrunk < mean-2pp
     agg["AVOID"] = agg["shrunk_rate"] < (oxford_mean - 0.02)
     agg["data_quality"] = agg["n_suppressed"].apply(
-        lambda x: "complete" if x == 0 else ("all suppressed" if x == 6 else f"{int(x)} yr suppressed")
+        lambda x: "complete" if x == 0 else (
+            "all suppressed" if x == N_CYCLES else f"{int(x)} yr suppressed"
+        )
     )
 
     agg = agg.merge(per_year, on="college", how="left")
@@ -87,6 +89,53 @@ def load_and_process():
     return agg, oxford_mean, oxford_n, oxford_k, df3
 
 agg, oxford_mean, oxford_n, oxford_k, df3_raw = load_and_process()
+
+# ── PAT historical data (module-level constant) ────────────────────────────────
+
+_pat_raw = [
+    {"Cycle": 2022, "mean": 51.2, "sd": 16.0, "threshold": None,
+     "auto_shortlisted": 307, "below_threshold": 164, "applicants": 1633},
+    {"Cycle": 2023, "mean": 55.6, "sd": 18.6, "threshold": None,
+     "auto_shortlisted": 400, "below_threshold": 190, "applicants": 1672},
+    {"Cycle": 2024, "mean": 49.6, "sd": 18.5, "threshold": 70.0,
+     "auto_shortlisted": 378, "below_threshold": 147, "applicants": 1790},
+    {"Cycle": 2025, "mean": 54.9, "sd": 17.8, "threshold": 73.5,
+     "auto_shortlisted": 379, "below_threshold":  89, "applicants": 1637},
+]
+pat_df = pd.DataFrame(_pat_raw)
+pat_df["total_shortlisted"] = pat_df["auto_shortlisted"] + pat_df["below_threshold"]
+pat_df["cycle_str"] = pat_df["Cycle"].astype(str)
+
+# Pre-defined rgba fill colours (avoids fragile hex-parsing at render time)
+_PAT_COLORS = {
+    2022: ("#1976d2", "rgba(25,118,210,0.08)"),
+    2023: ("#388e3c", "rgba(56,142,60,0.08)"),
+    2024: ("#f57c00", "rgba(245,124,0,0.08)"),
+    2025: ("#7b1fa2", "rgba(123,31,162,0.08)"),
+}
+
+# ── Formatting helpers ─────────────────────────────────────────────────────────
+
+def _fmt_acc(row):
+    if row["n_suppressed"] == N_CYCLES:
+        return "— (all suppressed)"
+    if row["n_suppressed"] > 0:
+        return f"≥ {int(row['k'])}"
+    return str(int(row["k"]))
+
+def _fmt_raw(row):
+    if row["n_suppressed"] == N_CYCLES:
+        return "—"
+    if row["n_suppressed"] > 0:
+        return f"≥ {row['k'] / row['n']:.1%}"
+    return f"{row['k'] / row['n']:.1%}"
+
+def _bar_color(row):
+    if row["AVOID"]:
+        return "#d32f2f"
+    if row["PREFER"]:
+        return "#388e3c"
+    return "#1976d2"
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 
@@ -102,32 +151,12 @@ c1, c2, c3, c4 = st.columns(4)
 c1.metric("Oxford-wide acceptance rate", f"{oxford_mean:.1%}",
           help="Direct-applicant acceptance rate, all colleges, 2019–2024")
 c2.metric("Direct applicants (6yr)", f"{int(oxford_n):,}")
-c3.metric("Acceptances (6yr)", f"{int(oxford_k):,}")
+c3.metric("Colleges flagged PREFER", str(int(agg["PREFER"].sum())),
+          help="Shrunk rate > 2pp above Oxford mean (equal-quality-pool assumption)")
 c4.metric("Colleges flagged AVOID", str(int(agg["AVOID"].sum())),
           help="Shrunk rate > 2pp below Oxford mean (equal-quality-pool assumption)")
 
-c5, c6 = st.columns(2)
-c5.metric("Colleges flagged PREFER", str(int(agg["PREFER"].sum())),
-          help="Shrunk rate > 2pp above Oxford mean (equal-quality-pool assumption)")
-c6.metric("Oxford mean (shrunk baseline)", f"{oxford_mean:.1%}")
-
 st.divider()
-
-# ── Formatting helpers (used by both chart and table) ──────────────────────────
-
-def _fmt_acc(row):
-    if row["n_suppressed"] == 6:
-        return "— (all suppressed)"
-    if row["n_suppressed"] > 0:
-        return f"≥ {int(row['k'])}"
-    return str(int(row["k"]))
-
-def _fmt_raw(row):
-    if row["n_suppressed"] == 6:
-        return "—"
-    if row["n_suppressed"] > 0:
-        return f"≥ {row['k'] / row['n']:.1%}"
-    return f"{row['k'] / row['n']:.1%}"
 
 # ── Ranked bar chart ───────────────────────────────────────────────────────────
 
@@ -135,15 +164,10 @@ st.subheader("Acceptance rate by college (direct applicants, 2019–2024)")
 st.caption(
     "Bars show Bayesian-shrunk acceptance rate (prior = Oxford mean, K=20). "
     "Error bars = 95% Wilson CI. Red dashed line = Oxford mean. "
-    "Green = PREFER (shrunk > mean+2pp). Red = AVOID (shrunk < mean−2pp). Blue = neutral. Both use equal-quality assumption."
+    "🟢 PREFER = shrunk > mean+2pp · 🔴 AVOID = shrunk < mean−2pp · 🔵 Neutral. "
+    "PREFER/AVOID use the equal-quality-pool assumption — see Methodology for the "
+    "statistically conservative alternative (Wilson CI filter)."
 )
-
-def _bar_color(row):
-    if row["AVOID"]:
-        return "#d32f2f"
-    if row["PREFER"]:
-        return "#388e3c"
-    return "#1976d2"
 
 colors = agg.apply(_bar_color, axis=1).tolist()
 
@@ -207,6 +231,7 @@ fig.update_xaxes(showgrid=False)
 fig.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.08)")
 
 st.plotly_chart(fig, use_container_width=True)
+st.info("**Wolfson College** is absent from the FOI data and does not appear in this analysis.")
 
 # ── Full data table ────────────────────────────────────────────────────────────
 
@@ -220,6 +245,8 @@ display.columns = [
     "Rank", "College", "Apps (6yr)", "Known acc", "Raw rate",
     "Shrunk rate", "Wilson lo", "Wilson hi", "PREFER", "AVOID", "Data quality"
 ]
+display["Known acc"] = agg.apply(_fmt_acc, axis=1)
+display["Raw rate"] = agg.apply(_fmt_raw, axis=1)
 
 def style_table(row):
     if row["AVOID"]:
@@ -228,17 +255,12 @@ def style_table(row):
         return ["background-color: #e8f5e9"] * len(row)
     return [""] * len(row)
 
-display["Known acc"] = agg.apply(_fmt_acc, axis=1)
-display["Raw rate"] = agg.apply(_fmt_raw, axis=1)
-
 pct_cols = ["Shrunk rate", "Wilson lo", "Wilson hi"]
 styled = (
     display.style
     .apply(style_table, axis=1)
     .format({c: "{:.1%}" for c in pct_cols})
-    .format({"Apps (6yr)": lambda x: f"{x:.0f}"})
-    .format({"Raw rate": lambda x: x})
-    .format({"Known acc": lambda x: x})
+    .format({"Apps (6yr)": "{:.0f}"})
 )
 
 st.dataframe(styled, use_container_width=True, hide_index=True)
@@ -276,8 +298,8 @@ with col_l:
     st.markdown(flag)
     st.metric("Rank", f"#{int(row['rank'])} of 29")
     st.metric("6yr direct applicants", f"{int(row['n'])}")
-    fully_suppressed = row["n_suppressed"] == 6
-    partial_suppressed = 0 < row["n_suppressed"] < 6
+    fully_suppressed = row["n_suppressed"] == N_CYCLES
+    partial_suppressed = 0 < row["n_suppressed"] < N_CYCLES
     if fully_suppressed:
         st.metric("Known acceptances (6yr)", "— (all suppressed)",
                   help="All 6 years suppressed by Oxford (count ≤5 each year).")
@@ -369,46 +391,32 @@ The cGCSE is expressed in standard deviations from the contextually-expected A*/
 at the applicant's school. A neutral/overseas applicant scores 0 (no boost, no penalty).
 """)
 
-    # ── PAT historical data ────────────────────────────────────────────────────
-    pat_df = pd.DataFrame([
-        {"Cycle": 2022, "mean": 51.2, "sd": 16.0, "threshold": None,
-         "auto_shortlisted": 307, "below_threshold": 164, "applicants": 1633, "offers": None},
-        {"Cycle": 2023, "mean": 55.6, "sd": 18.6, "threshold": None,
-         "auto_shortlisted": 400, "below_threshold": 190, "applicants": 1672, "offers": None},
-        {"Cycle": 2024, "mean": 49.6, "sd": 18.5, "threshold": 70.0,
-         "auto_shortlisted": 378, "below_threshold": 147, "applicants": 1790, "offers": 202},
-        {"Cycle": 2025, "mean": 54.9, "sd": 17.8, "threshold": 73.5,
-         "auto_shortlisted": 379, "below_threshold":  89, "applicants": 1637, "offers": 201},
-    ])
-    pat_df["total_shortlisted"] = pat_df["auto_shortlisted"] + pat_df["below_threshold"]
-
     ch1, ch2 = st.columns(2)
 
     # Chart 1: approximate score distributions
     with ch1:
         st.caption("**Approximate PAT score distributions by cycle** (normal fit to reported mean & SD)")
-        year_colors = {2022: "#1976d2", 2023: "#388e3c", 2024: "#f57c00", 2025: "#7b1fa2"}
         fig_dist = go.Figure()
         x_vals = np.linspace(0, 100, 500)
-        from scipy.stats import norm as norm_dist
         for _, r in pat_df.iterrows():
             yr = int(r["Cycle"])
+            line_color, fill_color = _PAT_COLORS[yr]
             y_vals = norm_dist.pdf(x_vals, r["mean"], r["sd"]) * r["applicants"]
             fig_dist.add_trace(go.Scatter(
                 x=x_vals, y=y_vals,
                 name=str(yr),
-                line=dict(color=year_colors[yr], width=2),
+                line=dict(color=line_color, width=2),
                 fill="tozeroy",
-                fillcolor=f"rgba{tuple(list(int(year_colors[yr].lstrip('#')[i:i+2], 16) for i in (0,2,4)) + [0.08])}",
+                fillcolor=fill_color,
                 hovertemplate=f"{yr} — PAT %{{x:.0f}}%<extra></extra>",
             ))
             if pd.notna(r["threshold"]):
                 fig_dist.add_vline(
                     x=r["threshold"], line_dash="dash",
-                    line_color=year_colors[yr], line_width=1.5,
+                    line_color=line_color, line_width=1.5,
                     annotation_text=f"{yr} threshold {r['threshold']:.0f}%",
                     annotation_font_size=10,
-                    annotation_font_color=year_colors[yr],
+                    annotation_font_color=line_color,
                     annotation_position="top left",
                 )
         fig_dist.update_layout(
@@ -427,19 +435,19 @@ at the applicant's school. A neutral/overseas applicant scores 0 (no boost, no p
         fig_funnel = go.Figure()
         fig_funnel.add_trace(go.Bar(
             name="All applicants",
-            x=pat_df["Cycle"].astype(str),
+            x=pat_df["cycle_str"],
             y=pat_df["applicants"],
             marker_color="rgba(0,0,0,0.12)",
         ))
         fig_funnel.add_trace(go.Bar(
             name="Total shortlisted",
-            x=pat_df["Cycle"].astype(str),
+            x=pat_df["cycle_str"],
             y=pat_df["total_shortlisted"],
             marker_color="rgba(25,118,210,0.6)",
         ))
         fig_funnel.add_trace(go.Bar(
             name="Auto-shortlisted (R-score only)",
-            x=pat_df["Cycle"].astype(str),
+            x=pat_df["cycle_str"],
             y=pat_df["auto_shortlisted"],
             marker_color="rgba(25,118,210,1.0)",
         ))
@@ -455,11 +463,11 @@ at the applicant's school. A neutral/overseas applicant scores 0 (no boost, no p
         fig_funnel.update_xaxes(showgrid=False)
         st.plotly_chart(fig_funnel, use_container_width=True)
 
-    # Chart 3: mean ± SD trend
+    # Chart 3: mean ± SD trend with threshold overlay
     st.caption("**PAT mean ± 1 SD by cycle**")
     fig_trend = go.Figure()
     fig_trend.add_trace(go.Scatter(
-        x=pat_df["Cycle"].astype(str),
+        x=pat_df["cycle_str"],
         y=pat_df["mean"],
         error_y=dict(type="data", array=pat_df["sd"], color="rgba(0,0,0,0.3)",
                      thickness=1.5, width=6),
@@ -469,10 +477,9 @@ at the applicant's school. A neutral/overseas applicant scores 0 (no boost, no p
         name="PAT mean",
         hovertemplate="Cycle %{x}<br>Mean %{y:.1f}%<extra></extra>",
     ))
-    # Add known thresholds as scatter
     thr_df = pat_df[pat_df["threshold"].notna()]
     fig_trend.add_trace(go.Scatter(
-        x=thr_df["Cycle"].astype(str),
+        x=thr_df["cycle_str"],
         y=thr_df["threshold"],
         mode="markers",
         marker=dict(size=10, color="#d32f2f", symbol="diamond"),
@@ -570,6 +577,8 @@ captures the full pipeline.
 - *AVOID flag criteria (equal-quality assumption)*: shrunk rate > 2pp below Oxford mean.
   Symmetric with PREFER. Assumes applicant pools are identical; in practice AVOID colleges
   may attract weaker self-selected pools, so the penalty may be partly applicant-pool effect.
+  The statistically conservative alternative (Wilson CI upper bound < mean AND n≥30 AND
+  ≤1 suppressed year) flags only Worcester College.
 - *PREFER flag criteria (equal-quality assumption)*: shrunk rate > 2pp above Oxford mean.
   In practice, PREFER colleges may attract stronger self-selected pools — the observed advantage
   is likely partly applicant-pool effect, not a college-specific acceptance premium.
